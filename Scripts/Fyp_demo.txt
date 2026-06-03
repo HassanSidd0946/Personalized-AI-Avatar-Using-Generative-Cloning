@@ -1,0 +1,4 @@
+Welcome to the final demonstration of our Final Year Project.
+I am a fully autonomous AI avatar.
+My voice is dynamically generated using flow matching architectures.
+Thank you for your time.

@@ -1,0 +1,32 @@
+TEXT 1:
+Hi! 👋 This is my project. Visit https://test.com
+
+TEXT 2:
+This AI system uses API calls 🎉 and the GFPGAN model for our FYP at UCP university.👏 Well done team! ✅
+
+TEXT 1:
+Please visit https://my-fyp.com/results and also check www.ucp.edu.pk for more info.
+
+TEXT 1:
+For queries contact ali@fyp.com or reach us at support@ucp.edu.pk anytime.
+
+TEXT 1:
+This is a state-of-the-art system developed during 2024-2025 — it handles real-time processing.
+
+TEXT 1:
+The model (Wav2Lip) uses **deep learning** to generate [lip-synced] videos with {high accuracy}.
+
+TEXT 1:
+The system costs $500 & achieves 95% accuracy. Performance vs. baseline is approx. 2x better i.e. significant improvement.
+
+TEXT 1:
+Hello   this   is    my   final   year   project.
+I am doing   BS Computer Science.
+Thank   you.
+
+TEXT 1:
+🚀 Hey! Check out https://hassan-fyp.com/demo & email us @ ali@test.com 😎 
+This AI-powered FYP uses API & GFPGAN model (state-of-the-art) — costs $0 with 100% accuracy!! 🎯
+
+TEXT 1:
+Welcome to the final demonstration of our Final Year Project. I am a fully autonomous AI avatar. Thank you for your time.

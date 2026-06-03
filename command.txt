@@ -1,0 +1,61 @@
+To run MODAL_HUG_GIT.py file which is actually Wav2Lip + GFPGAN Pipeline
+
+cd .\WavTOlip\
+.\venv312\Scripts\Activate.ps1
+modal run MODAL_HUG_GIT.py --face-path avatar1.jpg --audio-path Voice_break.wav
+
+
+
+---------------------------------------
+Here we have already downloaded weights:
+
+Invoke-WebRequest -Uri "https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth" -OutFile "face_detection/detection/sfd/s3fd.pth"
+# Download GFPGAN
+>> Invoke-WebRequest -Uri "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth" -OutFile "checkpoints/GFPGANv1.3.pth" 
+# Download Wav2Lip model
+>> Invoke-WebRequest -Uri "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" -OutFile "checkpoints/wav2lip_gan.pth"
+
+
+Exact Commands:
+# Navigate into the Wav2Lip directory
+cd Wav2Lip
+
+# Create the required directories
+mkdir -p checkpoints
+mkdir -p face_detection/detection/sfd
+
+# Now download the weights
+# 1. Face detection model
+Invoke-WebRequest -Uri "https://www.adrianbulat.com/downloads/python-fan/s3fd-619a316812.pth" -OutFile "face_detection/detection/sfd/s3fd.pth"
+
+# 2. GFPGAN model
+Invoke-WebRequest -Uri "https://github.com/TencentARC/GFPGAN/releases/download/v1.3.0/GFPGANv1.3.pth" -OutFile "checkpoints/GFPGANv1.3.pth"
+
+# 3. Wav2Lip model (this one is larger, ~150MB)
+Invoke-WebRequest -Uri "https://huggingface.co/camenduru/Wav2Lip/resolve/main/checkpoints/wav2lip_gan.pth" -OutFile "checkpoints/wav2lip_gan.pth"
+
+# Go back to parent directory
+cd ..
+
+
+
+
+
+
+
+In MODAL directory:
+(venv) PS D:\COURSES\MODAL> python main_pipeline.py --text "Hello, I am your AI avatar speaking to you." --ref-audio XTTS-v2/ref_audio.wav --face WavTOlip/avatar1.jpg
+
+
+python main_pipeline.py --text "Welcome to the final demonstration of our Final Year Project. I am a fully autonomous AI avatar, developed to showcase the integration of generative AI pipelines. My voice is dynamically generated in real-time using flow matching architectures, while my facial expressions and lip movements are synchronized seamlessly using advanced deep learning models. Notice how the visual clarity is maintained throughout the video without any frame drops. Thank you for your time." --ref-audio XTTS-v2/ref_audio.wav --face WavTOlip/avatar1.jpg
+
+
+python run.py --text-file Scripts/Fyp_demo.txt --ref-audio XTTS-v2/ref_audio.wav --face WavTOlip/avatar1.jpg
+
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------
+python -m venv venv
+venv/Scripts/Activate
+pip install -r requirements.txt
+(venv) PS D:\COURSES\MODAL> uvicorn app:fastapi_app --reload --port 8000
