@@ -1,6 +1,5 @@
 """
 text_cleaner.py - TTS Text Pre-processing Utility
-Location : MODAL/text_cleaner.py
 
 Cleans raw text before passing to XTTS-v2 to prevent
 hallucination, mumbling, or crashes on emojis/URLs/special chars.
@@ -10,10 +9,6 @@ import re
 from dataclasses import dataclass, field
 import emoji
 
-
-# ---------------------------------------------------------------------------
-# Result dataclass
-# ---------------------------------------------------------------------------
 
 @dataclass
 class CleanResult:
@@ -38,12 +33,7 @@ class CleanResult:
         return "\n".join(lines)
 
 
-# ---------------------------------------------------------------------------
-# Cleaning steps
-# ---------------------------------------------------------------------------
-
 def _remove_emojis(text: str) -> tuple[str, str | None]:
-    # Uses the `emoji` library to strip all Unicode emoji characters
     cleaned = emoji.replace_emoji(text, replace="")
     return (cleaned, "Emojis removed") if cleaned != text else (cleaned, None)
 
@@ -102,10 +92,6 @@ _CLEANING_STEPS = [
     _normalize_whitespace,
 ]
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
 
 def clean_text(text: str) -> CleanResult:
     """
