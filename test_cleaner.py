@@ -1,7 +1,5 @@
 """
 test_cleaner.py - Terminal Test for llm_cleaner
-================================================
-Location : MODAL/test_cleaner.py
 
 Usage:
     python test_cleaner.py
