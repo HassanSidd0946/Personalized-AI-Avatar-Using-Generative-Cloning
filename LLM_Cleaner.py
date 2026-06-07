@@ -250,8 +250,6 @@
 
 """
 llm_cleaner.py - Hybrid TTS Text Normalization
-===============================================
-Location : MODAL/llm_cleaner.py
 
 Strategy:
   Step 1 - Regex pre-pass  : Remove emojis, URLs, emails mechanically
@@ -269,9 +267,6 @@ from dotenv import load_dotenv
 from langchain_core.messages import HumanMessage, SystemMessage
 from langchain_openai import AzureChatOpenAI
 
-# ---------------------------------------------------------------------------
-# Load .env
-# ---------------------------------------------------------------------------
 load_dotenv()
 
 AZURE_API_KEY     = os.getenv("AZURE_OPENAI_API_KEY", "")
@@ -279,9 +274,6 @@ AZURE_ENDPOINT    = os.getenv("AZURE_OPENAI_ENDPOINT", "").rstrip("/")
 AZURE_DEPLOYMENT  = os.getenv("AZURE_OPENAI_MODEL_NAME", "")
 AZURE_API_VERSION = os.getenv("AZURE_OPENAI_API_VERSION", "")
 
-# ---------------------------------------------------------------------------
-# Step 1 — Regex pre-processor (runs BEFORE LLM, always reliable)
-# ---------------------------------------------------------------------------
 
 def _regex_preprocess(text: str) -> str:
     """
@@ -309,7 +301,7 @@ def _regex_preprocess(text: str) -> str:
     # 3. Convert URLs to spoken form
     def url_to_spoken(m):
         url = m.group(0)
-        url = re.sub(r'https?://', '', url)   # remove scheme
+        url = re.sub(r'https?://', '', url) 
         url = re.sub(r'www\.', 'www dot ', url)
         url = url.replace('.', ' dot ')
         url = url.replace('/', ' slash ')
@@ -321,7 +313,7 @@ def _regex_preprocess(text: str) -> str:
     # 4. Replace dashes and hyphens with space
     text = re.sub(r'[-–—]', ' ', text)
 
-    # 5. Remove remaining special characters — keep letters, digits, basic punctuation
+    # 5. Remove remaining special characters keep letters, digits, basic punctuation
     text = re.sub(r'[^a-zA-Z0-9\s.,?!\']', ' ', text)
 
     # 6. Normalize whitespace
@@ -330,9 +322,6 @@ def _regex_preprocess(text: str) -> str:
     return text
 
 
-# ---------------------------------------------------------------------------
-# Step 2 — LLM refinement prompt (only handles what regex can't)
-# ---------------------------------------------------------------------------
 _REFINEMENT_PROMPT = """\
 You are a TTS Text Normalization Node. The input text has already been \
 pre-processed to remove emojis and convert URLs and emails. 
@@ -371,9 +360,6 @@ If nothing needs to change, return the text exactly as given.
 """
 
 
-# ---------------------------------------------------------------------------
-# LLM client
-# ---------------------------------------------------------------------------
 _llm = None
 _llm_available = all([AZURE_API_KEY, AZURE_ENDPOINT, AZURE_DEPLOYMENT, AZURE_API_VERSION])
 
@@ -397,10 +383,6 @@ else:
         _llm = None
 
 
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
 def llm_clean_text(raw_text: str) -> str:
     """
     Hybrid TTS normalizer: regex pre-pass + LLM refinement.
@@ -418,17 +400,17 @@ def llm_clean_text(raw_text: str) -> str:
 
     print(f"[llm_cleaner] Input  : {raw_text[:120]}")
 
-    # ── Step 1: Regex pre-processing (always runs) ───────────────────────────
+
     try:
         after_regex = _regex_preprocess(raw_text)
         print(f"[llm_cleaner] Regex  : {after_regex[:120]}")
     except Exception as e:
-        print(f"[llm_cleaner] Regex error: {e} — using raw text")
+        print(f"[llm_cleaner] Regex error: {e} using raw text")
         after_regex = raw_text
 
-    # ── Step 2: LLM refinement (acronyms + abbreviations) ────────────────────
+
     if _llm is None:
-        print("[llm_cleaner] LLM not available — regex result used.")
+        print("[llm_cleaner] LLM not available regex result used.")
         return after_regex
 
     try:
@@ -448,7 +430,7 @@ def llm_clean_text(raw_text: str) -> str:
             cleaned = str(raw_content).strip()
 
         if not cleaned:
-            print("[llm_cleaner] LLM returned empty — using regex result.")
+            print("[llm_cleaner] LLM returned empty using regex result.")
             return after_regex
 
         print(f"[llm_cleaner] Final  : {cleaned[:120]}")
