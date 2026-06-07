@@ -1,23 +1,20 @@
 """
 run.py — CLI Entry Point for AI Avatar Pipeline
-================================================
-Location : MODAL/run.py
 
 This script is the ONLY entry point. It handles all input resolution
 (direct text vs .txt file) and delegates to main_pipeline.run_pipeline().
 
-main_pipeline.py is never modified — it stays a pure, importable module.
+main_pipeline.py is never modified it stays a pure, importable module.
 
 Usage:
-------
   # Option A: Direct text string
-  python run.py --text "Hello, I am your AI avatar." ^
-                --ref-audio XTTS-v2/ref_audio.wav ^
+  python run.py --text "Hello, I am your AI avatar." 
+                --ref-audio XTTS-v2/ref_audio.wav 
                 --face WavTOlip/avatar1.jpg
 
   # Option B: Text from a .txt file
-  python run.py --text-file scripts/demo_script.txt ^
-                --ref-audio XTTS-v2/ref_audio.wav ^
+  python run.py --text-file scripts/demo_script.txt 
+                --ref-audio XTTS-v2/ref_audio.wav 
                 --face WavTOlip/avatar1.jpg
 
   # Optional flags (same as before):
@@ -30,15 +27,8 @@ import argparse
 import sys
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Import the pipeline — run.py is always executed from MODAL/ root
-# ---------------------------------------------------------------------------
 from main_pipeline import run_pipeline
 
-
-# ---------------------------------------------------------------------------
-# Text resolution
-# ---------------------------------------------------------------------------
 
 def resolve_text(args: argparse.Namespace) -> str:
     """
@@ -53,7 +43,7 @@ def resolve_text(args: argparse.Namespace) -> str:
     the file doesn't exist, or the file is empty after cleaning.
     """
 
-    # ── Mutual exclusivity guard ─────────────────────────────────────────────
+    
     if args.text and args.text_file:
         _die(
             "Provide either --text OR --text-file, not both.",
@@ -70,7 +60,6 @@ def resolve_text(args: argparse.Namespace) -> str:
             )
         )
 
-    # ── Direct text ──────────────────────────────────────────────────────────
     if args.text:
         text = args.text.strip()
         if not text:
@@ -78,18 +67,16 @@ def resolve_text(args: argparse.Namespace) -> str:
         _log_source("direct --text argument", preview=text)
         return text
 
-    # ── File input ───────────────────────────────────────────────────────────
     file_path = Path(args.text_file)
 
     if not file_path.exists():
         _die(f"Text file not found: {file_path}")
 
     if file_path.suffix.lower() != ".txt":
-        print(f"  ⚠  Warning: '{file_path.name}' is not a .txt file — proceeding anyway.")
+        print(f"  Warning: '{file_path.name}' is not a .txt file — proceeding anyway.")
 
     raw = file_path.read_text(encoding="utf-8")
 
-    # Clean: newlines → spaces, collapse multi-spaces, strip ends
     cleaned = " ".join(raw.split())
 
     if not cleaned:
@@ -97,7 +84,6 @@ def resolve_text(args: argparse.Namespace) -> str:
 
     _log_source(f"file: {file_path}", preview=cleaned)
 
-    # Show what was cleaned so the user can verify
     original_lines = raw.strip().count("\n") + 1
     if original_lines > 1:
         print(f"    Lines in file    : {original_lines}")
@@ -105,10 +91,6 @@ def resolve_text(args: argparse.Namespace) -> str:
 
     return cleaned
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _log_source(source: str, preview: str) -> None:
     max_preview = 90
@@ -126,14 +108,10 @@ def _die(message: str, hint: str = "") -> None:
     sys.exit(1)
 
 
-# ---------------------------------------------------------------------------
-# Argument parsing
-# ---------------------------------------------------------------------------
-
 def _build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="run.py",
-        description="AI Avatar Pipeline — XTTS-v2 voice cloning + Wav2Lip lip-sync",
+        description="AI Avatar Pipeline XTTS-v2 voice cloning + Wav2Lip lip-sync",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Input modes (mutually exclusive):
@@ -142,20 +120,20 @@ Input modes (mutually exclusive):
                 Newlines are automatically collapsed to spaces.
 
 Examples:
-  python run.py ^
-      --text "Hello, I am your AI avatar." ^
-      --ref-audio XTTS-v2/ref_audio.wav ^
+  python run.py
+      --text "Hello, I am your AI avatar."
+      --ref-audio XTTS-v2/ref_audio.wav
       --face WavTOlip/avatar1.jpg
 
-  python run.py ^
-      --text-file scripts/fyp_demo.txt ^
-      --ref-audio XTTS-v2/ref_audio.wav ^
-      --face WavTOlip/slient_head.mp4 ^
+  python run.py 
+      --text-file scripts/fyp_demo.txt 
+      --ref-audio XTTS-v2/ref_audio.wav
+      --face WavTOlip/slient_head.mp4 
       --output-dir results/fyp_demo
         """,
     )
 
-    # ── Input source (mutually exclusive) ────────────────────────────────────
+    
     input_group = parser.add_mutually_exclusive_group()
     input_group.add_argument(
         "--text", "-t",
@@ -170,7 +148,7 @@ Examples:
         help="Path to a .txt file containing the avatar script.",
     )
 
-    # ── Required pipeline inputs ─────────────────────────────────────────────
+    
     parser.add_argument(
         "--ref-audio", "-r",
         required=True,
@@ -184,7 +162,7 @@ Examples:
         help="Avatar image (.jpg/.png) or video (.mp4).",
     )
 
-    # ── Optional pipeline flags ───────────────────────────────────────────────
+    
     parser.add_argument(
         "--output-dir", "-o",
         default="output",
@@ -209,24 +187,17 @@ Examples:
     return parser
 
 
-# ---------------------------------------------------------------------------
-# Entry point
-# ---------------------------------------------------------------------------
-
 def main() -> None:
     parser = _build_parser()
     args = parser.parse_args()
-
-    # ── Banner ────────────────────────────────────────────────────────────────
+    
     width = 62
     print("\n" + "=" * width)
     print("  AI Avatar Pipeline  |  run.py")
     print("=" * width)
 
-    # ── Resolve input text ────────────────────────────────────────────────────
     text = resolve_text(args)
-
-    # ── Print full config ─────────────────────────────────────────────────────
+    
     print("  Configuration")
     print("  " + "-" * 44)
     print(f"  Ref audio    : {args.ref_audio}")
@@ -234,7 +205,7 @@ def main() -> None:
     print(f"  Output dir   : {args.output_dir}")
     print(f"  Modal mode   : {'deployed' if args.use_deployed else 'ephemeral'}\n")
 
-    # ── Delegate to pipeline ──────────────────────────────────────────────────
+
     try:
         final_video = run_pipeline(
             text=text,
