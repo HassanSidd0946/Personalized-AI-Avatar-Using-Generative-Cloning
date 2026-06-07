@@ -300,8 +300,6 @@
 
 """
 main_pipeline.py — Master AI Avatar Pipeline Orchestrator
-==========================================================
-Location : MODAL/main_pipeline.py
 
 Two invocation modes
 ---------------------
@@ -319,32 +317,22 @@ Optional flags:
 
 import argparse
 import os
-import subprocess  # ← ADDED: for FFmpeg re-encode
+import subprocess  
 import sys
 from datetime import datetime
 from pathlib import Path
 
-# ---------------------------------------------------------------------------
-# Path setup — make sibling packages importable regardless of CWD
-# ---------------------------------------------------------------------------
-ROOT = Path(__file__).parent.resolve()
-sys.path.insert(0, str(ROOT / "XTTS-v2"))   # exposes avatar_voice
-sys.path.insert(0, str(ROOT / "WavTOlip"))  # exposes MODAL_HUG_GIT
-
-# ---------------------------------------------------------------------------
-# Local imports (after path setup)
-# ---------------------------------------------------------------------------
 import modal
 from avatar_voice import generate_avatar_voice  
 
-# Import the app + function objects (not yet hydrated — that happens at call time)
 from MODAL_HUG_GIT import app as lipsync_app
 from MODAL_HUG_GIT import generate_lipsync_video
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
+ROOT = Path(__file__).parent.resolve()
+sys.path.insert(0, str(ROOT / "XTTS-v2"))   
+sys.path.insert(0, str(ROOT / "WavTOlip"))
+
 
 def _banner(title: str) -> None:
     width = 62
@@ -388,17 +376,13 @@ def _check_env() -> None:
         sys.exit(1)
 
 
-# ---------------------------------------------------------------------------
-# Inner pipeline — must be called while a Modal context is active
-# ---------------------------------------------------------------------------
-
 def _run_pipeline_inner(
     text: str,
     ref_audio_path: str,
     face_path: str,
     output_dir: str,
-    voice_filename,   # str | None
-    lipsync_fn,       # the hydrated Modal function to call
+    voice_filename,   
+    lipsync_fn,       
 ) -> str:
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     output_dir_path = Path(output_dir)
@@ -410,7 +394,7 @@ def _run_pipeline_inner(
 
     TOTAL_STEPS = 3
 
-    # ── Step 1 : Voice cloning (local, Replicate API) ────────────────────────
+    
     _step(1, TOTAL_STEPS, "Cloning voice with XTTS-v2...")
     print(f"    Text        : {text[:80]}{'...' if len(text) > 80 else ''}")
     print(f"    Ref audio   : {ref_audio_path}\n")
@@ -426,7 +410,7 @@ def _run_pipeline_inner(
     audio_size_kb = Path(generated_audio_path).stat().st_size / 1024
     print(f"\n    Voice saved -> {generated_audio_path}  ({audio_size_kb:.1f} KB)\n")
 
-    # ── Step 2 : Lip-sync on Modal GPU ───────────────────────────────────────
+    
     _step(2, TOTAL_STEPS, "Generating lip-sync video (Modal T4 GPU)...")
     print(f"    Face image  : {face_path}")
     print(f"    Audio       : {generated_audio_path}\n")
@@ -436,10 +420,10 @@ def _run_pipeline_inner(
     with open(generated_audio_path, "rb") as fh:
         audio_bytes = fh.read()
 
-    print("    Dispatching to Modal... (this takes 2-5 minutes)\n")
+    print("    Dispatching to Modal... (this takes several minutes depending on text length)\n")
     video_bytes = lipsync_fn.remote(image_bytes, audio_bytes)
 
-    # ── Step 3 : Save output ─────────────────────────────────────────────────
+    
     _step(3, TOTAL_STEPS, "Saving final video...")
     video_filename = f"avatar_{timestamp}.mp4"
     video_output_path = str(output_dir_path / video_filename)
@@ -450,7 +434,7 @@ def _run_pipeline_inner(
     video_size_mb = len(video_bytes) / 1024 / 1024
     print(f"    Video saved -> {video_output_path}  ({video_size_mb:.2f} MB)\n")
 
-    # ── FFmpeg re-encode — fix codec for browser playback (libx264 + yuv420p) ──
+    
     _temp_converted_path = video_output_path + ".converted.mp4"
     subprocess.run(
         [
@@ -469,10 +453,6 @@ def _run_pipeline_inner(
 
     return video_output_path
 
-
-# ---------------------------------------------------------------------------
-# Public entry point — handles both ephemeral and deployed modes
-# ---------------------------------------------------------------------------
 
 def run_pipeline(
     text: str,
@@ -510,9 +490,6 @@ def run_pipeline(
     )
 
     if use_deployed:
-        # ── Deployed mode ────────────────────────────────────────────────────
-        # Connects to the live app without a local app.run() context.
-        # Requires:  modal deploy WavTOlip/MODAL_HUG_GIT.py
         print("    Mode: connecting to deployed Modal app...\n")
         fn = modal.Function.lookup(
             "fyp-avatar-lipsync-backend",
@@ -521,18 +498,11 @@ def run_pipeline(
         return _run_pipeline_inner(lipsync_fn=fn, **inner_kwargs)
 
     else:
-        # ── Ephemeral mode (default) ─────────────────────────────────────────
-        # Validate token HERE — before app.run() — because Windows does not
-        # reliably propagate $env: variables into Modal's async event loop.
         _check_env()
         print("    Mode: ephemeral Modal app (no prior deploy needed)\n")
         with lipsync_app.run():
             return _run_pipeline_inner(lipsync_fn=generate_lipsync_video, **inner_kwargs)
 
-
-# ---------------------------------------------------------------------------
-# CLI
-# ---------------------------------------------------------------------------
 
 def _parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
@@ -541,16 +511,16 @@ def _parse_args() -> argparse.Namespace:
         epilog="""
 Examples:
   # Ephemeral mode — no prior deploy needed (default)
-  python main_pipeline.py ^
-      --text "Hello, I am your AI avatar." ^
-      --ref-audio XTTS-v2/ref_audio.wav ^
+  python main_pipeline.py 
+      --text "Hello, I am your AI avatar." 
+      --ref-audio XTTS-v2/ref_audio.wav 
       --face WavTOlip/avatar1.jpg
 
   # Deployed mode — faster cold-start after `modal deploy WavTOlip/MODAL_HUG_GIT.py`
-  python main_pipeline.py ^
-      --text "Hello, I am your AI avatar." ^
-      --ref-audio XTTS-v2/ref_audio.wav ^
-      --face WavTOlip/avatar1.jpg ^
+  python main_pipeline.py 
+      --text "Hello, I am your AI avatar." 
+      --ref-audio XTTS-v2/ref_audio.wav 
+      --face WavTOlip/avatar1.jpg 
       --use-deployed
         """,
     )
