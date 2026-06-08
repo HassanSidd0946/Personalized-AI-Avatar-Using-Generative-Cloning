@@ -325,13 +325,13 @@ from pathlib import Path
 import modal
 from avatar_voice import generate_avatar_voice  
 
-from MODAL_HUG_GIT import app as lipsync_app
-from MODAL_HUG_GIT import generate_lipsync_video
-
-
 ROOT = Path(__file__).parent.resolve()
 sys.path.insert(0, str(ROOT / "XTTS-v2"))   
 sys.path.insert(0, str(ROOT / "WavTOlip"))
+
+
+from MODAL_HUG_GIT import app as lipsync_app
+from MODAL_HUG_GIT import generate_lipsync_video
 
 
 def _banner(title: str) -> None:
