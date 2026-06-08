@@ -600,7 +600,6 @@
 
 """
 app.py - FastAPI Backend for AI Avatar Pipeline
-Location : MODAL/app.py
 
 IMPORTANT: Variable named `fastapi_app` to avoid clash with
 Modal's `app` object that gets imported via main_pipeline.py
@@ -631,9 +630,7 @@ from supabase import Client, create_client
 
 from LLM_Cleaner import llm_clean_text
 
-# ---------------------------------------------------------------------------
-# Lazy import — prevents Modal's app object from crashing uvicorn startup
-# ---------------------------------------------------------------------------
+
 _run_pipeline = None
 
 def _get_pipeline():
@@ -644,28 +641,16 @@ def _get_pipeline():
     return _run_pipeline
 
 
-# ---------------------------------------------------------------------------
-# Supabase client — initialized once at startup from environment variables
-#
-# Add these to your MODAL/.env file:
-#   SUPABASE_URL=https://xxxxxxxxxxxx.supabase.co
-#   SUPABASE_KEY=your-anon-or-service-role-key
-#
-# Storage bucket : avatars       (create in Supabase dashboard -> Storage)
-# Database table : generations   (SQL to create is at the bottom of this file)
-# ---------------------------------------------------------------------------
-# Load .env file explicitly so keys are available before supabase init
 try:
     from dotenv import load_dotenv
     load_dotenv()
 except ImportError:
-    pass  # python-dotenv optional — keys may come from system env
+    pass  
 
 _raw_url: str = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY: str = os.environ.get("SUPABASE_KEY", "")
 
-# Sanitize URL — remove accidental trailing paths like /rest/v1/
-# Supabase client needs only the base URL: https://xxxx.supabase.co
+
 SUPABASE_URL: str = _raw_url.split("/rest/")[0].split("/auth/")[0].rstrip("/")
 
 if not SUPABASE_URL or not SUPABASE_KEY:
@@ -684,35 +669,25 @@ else:
         supabase = None
 
 
-# ---------------------------------------------------------------------------
-# FastAPI app
-# ---------------------------------------------------------------------------
 fastapi_app = FastAPI(
     title="AI Avatar Pipeline API",
     description="Generate lip-synced AI avatar videos using XTTS-v2 + Wav2Lip",
     version="2.0.0",
 )
 
-# ---------------------------------------------------------------------------
-# CORS — allows frontend (React/Next.js) on any origin to call this API
-# Restrict allow_origins to specific domains in production
-# ---------------------------------------------------------------------------
+
 fastapi_app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],       # e.g. ["https://yourdomain.com"] in production
+    allow_origins=["*"],       
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-# ---------------------------------------------------------------------------
-# Schemas
-# ---------------------------------------------------------------------------
-
 class GenerateRequest(BaseModel):
     text: str
-    user_id: str = "anonymous"               # Firebase UID from frontend
+    user_id: str = "anonymous"               
     ref_audio: str = "XTTS-v2/ref_audio.wav"
     face: str = "WavTOlip/avatar1.jpg"
     output_dir: str = "output"
@@ -729,7 +704,6 @@ class GenerateRequest(BaseModel):
     @field_validator("voice_file", mode="before")
     @classmethod
     def sanitize_voice_file(cls, v):
-        # Swagger UI sends literal "string" as placeholder — treat as None
         if v is None or str(v).strip().lower() in ("string", "", "null", "none"):
             return None
         return v
@@ -737,8 +711,8 @@ class GenerateRequest(BaseModel):
 
 class GenerateResponse(BaseModel):
     status: str
-    video_url: str           # Supabase public URL (or local path as fallback)
-    stored_in_cloud: bool    # True = uploaded to Supabase, False = local only
+    video_url: str           
+    stored_in_cloud: bool    
     user_id: str
     original_text: str
     cleaned_text: str
@@ -746,10 +720,6 @@ class GenerateResponse(BaseModel):
     cleaning_steps: list[str]
     char_delta: int
 
-
-# ---------------------------------------------------------------------------
-# Supabase helpers
-# ---------------------------------------------------------------------------
 
 def _upload_to_supabase(local_video_path: str, user_id: str) -> str | None:
     """
@@ -821,7 +791,6 @@ def _insert_generation_record(
         print(f"[supabase] DB record inserted for user: {user_id}")
 
     except Exception as e:
-        # Non-fatal — video is already uploaded, just log the DB failure
         print(f"[supabase] DB insert failed (non-fatal): {e}")
 
 
@@ -836,10 +805,6 @@ def _cleanup_local_files(*paths: str) -> None:
             print(f"[cleanup] Could not delete {path}: {e}")
 
 
-# ---------------------------------------------------------------------------
-# Upload helper — saves UploadFile to disk, returns local path
-# ---------------------------------------------------------------------------
-
 async def _save_upload_to_disk(upload_file: UploadFile, out_dir: str) -> str:
     """
     Read an UploadFile and save it under out_dir/user_upload_<filename>.
@@ -849,7 +814,6 @@ async def _save_upload_to_disk(upload_file: UploadFile, out_dir: str) -> str:
     """
     Path(out_dir).mkdir(parents=True, exist_ok=True)
 
-    # Sanitize filename — strip path components from browser-supplied names
     safe_filename = f"user_upload_{Path(upload_file.filename).name}"
     dest_path = str(Path(out_dir) / safe_filename)
 
@@ -861,23 +825,19 @@ async def _save_upload_to_disk(upload_file: UploadFile, out_dir: str) -> str:
     return dest_path
 
 
-# ---------------------------------------------------------------------------
-# Core pipeline runner — used by both endpoints
-# ---------------------------------------------------------------------------
-
 def _run(
     raw_text: str,
     user_id: str,
-    ref_audio: str,       # local path — either pre-saved temp file or static path
-    face: str,            # local path — either pre-saved temp file or static path
+    ref_audio: str,       
+    face: str,            
     output_dir: str,
     voice_file: str | None,
     use_deployed: bool,
     text_source: str,
-    temp_files: list[str] | None = None,  # extra temp paths to always delete
+    temp_files: list[str] | None = None, 
 ) -> GenerateResponse:
 
-    # ── Step 1: Normalize text via Azure OpenAI LLM ────────────────────────────
+    # Step 1: Normalize text via Azure OpenAI LLM 
     print(f"\n[llm_cleaner] Source   : {text_source}")
     print(f"[llm_cleaner] Raw input : {raw_text[:120]}")
 
@@ -889,7 +849,7 @@ def _run(
             detail="Text is empty after LLM normalization. Check your input."
         )
 
-    # ── Step 2: Validate input file paths ────────────────────────────────────
+    # Step 2: Validate input file paths 
     for label, path in [("ref_audio", ref_audio), ("face", face)]:
         if not Path(path).exists():
             raise HTTPException(
@@ -897,7 +857,7 @@ def _run(
                 detail=f"{label} not found: '{path}'"
             )
 
-    # ── Step 3: Run pipeline — track generated files for cleanup ─────────────
+    # Step 3: Run pipeline — track generated files for cleanup
     local_video_path: str | None = None
     local_voice_path: str | None = None
 
@@ -911,18 +871,16 @@ def _run(
             use_deployed=use_deployed,
         )
 
-        # Derive voice path from video path (same timestamp, same output_dir)
-        # main_pipeline saves voice as voice_<timestamp>.wav alongside the video
-        video_stem = Path(local_video_path).stem          # avatar_20260601_090346
-        timestamp = video_stem.replace("avatar_", "")     # 20260601_090346
+        video_stem = Path(local_video_path).stem          
+        timestamp = video_stem.replace("avatar_", "")     
         local_voice_path = str(Path(output_dir) / f"voice_{timestamp}.wav")
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Pipeline error: {str(e)}")
 
-    # ── Step 4: Upload to Supabase Storage ───────────────────────────────────
+    # Step 4: Upload to Supabase Storage 
     stored_in_cloud = False
-    video_url = local_video_path  # fallback to local path if upload fails
+    video_url = local_video_path  
 
     try:
         public_url = _upload_to_supabase(local_video_path, user_id)
@@ -931,7 +889,7 @@ def _run(
             video_url = public_url
             stored_in_cloud = True
 
-            # ── Step 5: Insert DB record ─────────────────────────────────────
+            # Step 5: Insert DB record 
             _insert_generation_record(
                 user_id=user_id,
                 cleaned_text=cleaned_text,
@@ -939,20 +897,16 @@ def _run(
             )
 
     finally:
-        # ── Step 6: Cleanup local files ──────────────────────────────────────
-        # Always runs — even if upload or DB insert raised an exception.
-        # temp_files (uploaded face + audio) are ALWAYS deleted regardless of outcome.
-        # Only delete generated video locally if it was successfully uploaded to cloud.
+        # Step 6: Cleanup local files
         if temp_files:
-            _cleanup_local_files(*temp_files)   # user uploads — always delete
+            _cleanup_local_files(*temp_files)
 
         if stored_in_cloud:
             _cleanup_local_files(local_video_path, local_voice_path)
         else:
-            # Keep local video as fallback — don't delete if cloud failed
             print(f"[cleanup] Keeping local video (cloud upload failed): {local_video_path}")
             if local_voice_path:
-                _cleanup_local_files(local_voice_path)  # voice always deletable
+                _cleanup_local_files(local_voice_path) 
 
     return GenerateResponse(
         status="success",
@@ -966,10 +920,6 @@ def _run(
         char_delta=len(raw_text) - len(cleaned_text),
     )
 
-
-# ---------------------------------------------------------------------------
-# Endpoints
-# ---------------------------------------------------------------------------
 
 @fastapi_app.get("/health")
 def health_check():
@@ -1000,7 +950,7 @@ async def generate_from_text(
       output_dir     — output directory (optional)
       use_deployed   — use deployed Modal app (optional)
     """
-    # Save uploaded files to disk first — _run() needs local paths
+
     temp_face_path  = await _save_upload_to_disk(face_file,      output_dir)
     temp_audio_path = await _save_upload_to_disk(ref_audio_file, output_dir)
 
@@ -1037,7 +987,7 @@ async def generate_from_file(
       output_dir     — output directory (optional)
       use_deployed   — use deployed Modal app (optional)
     """
-    # ── Validate and read the script .txt file ───────────────────────────────
+
     if not script_file.filename:
         raise HTTPException(status_code=400, detail="No script file provided.")
 
@@ -1064,7 +1014,6 @@ async def generate_from_file(
     print(f"[upload] Lines   : {raw_text.count(chr(10)) + 1}")
     print(f"[upload] user_id : {user_id}")
 
-    # ── Save face + audio uploads to disk ────────────────────────────────────
     temp_face_path  = await _save_upload_to_disk(face_file,      output_dir)
     temp_audio_path = await _save_upload_to_disk(ref_audio_file, output_dir)
 
@@ -1100,33 +1049,6 @@ def download_video(filename: str):
     )
 
 
-# @fastapi_app.get("/history/{user_id}")
-# def get_user_history(user_id: str, limit: int = 10):
-#     """
-#     Fetch generation history for a user from Supabase DB.
-
-#     Returns last `limit` generations (default 10), newest first.
-#     """
-#     if supabase is None:
-#         raise HTTPException(
-#             status_code=503,
-#             detail="Supabase not configured. Set SUPABASE_URL and SUPABASE_KEY in .env"
-#         )
-
-#     try:
-#         response = (
-#             supabase.table("generations")
-#             .select("id, user_id, text_used, video_url, created_at")
-#             .eq("user_id", user_id)
-#             .order("created_at", desc=True)
-#             .limit(limit)
-#             .execute()
-#         )
-#         return {"status": "ok", "user_id": user_id, "records": response.data}
-
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"DB query failed: {str(e)}")
-
 @fastapi_app.get("/history/{user_id}")
 def get_user_history(user_id: str, limit: int = 10):
     """
@@ -1159,13 +1081,10 @@ def get_user_history(user_id: str, limit: int = 10):
 
         for record in response.data:
             try:
-                # Storage path extract karo public URL se
-                # URL format: .../public/avatars/Adeel%20Riaz/avatar_xxx.mp4
                 storage_path = record["video_url"].split("/public/avatars/")[1]
-                folder   = unquote(storage_path.rsplit("/", 1)[0])   # "Adeel Riaz"
-                filename = unquote(storage_path.rsplit("/", 1)[1])   # "avatar_xxx.mp4"
+                folder   = unquote(storage_path.rsplit("/", 1)[0])   
+                filename = unquote(storage_path.rsplit("/", 1)[1])   
 
-                # Supabase storage mein folder list karo (decoded path)
                 files = supabase.storage.from_("avatars").list(folder)
                 file_names = [f["name"] for f in files] if files else []
 
@@ -1175,10 +1094,8 @@ def get_user_history(user_id: str, limit: int = 10):
                     orphan_ids.append(record["id"])
 
             except Exception:
-                # URL parse na ho sake toh record skip karo
                 orphan_ids.append(record["id"])
 
-        # Orphan DB records cleanup — video storage mein nahi hai toh DB se bhi hatao
         for orphan_id in orphan_ids:
             try:
                 supabase.table("generations").delete().eq("id", orphan_id).execute()
