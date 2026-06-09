@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """
 Utility Scripts for FYP Avatar Lip-Sync Pipeline
 
@@ -15,10 +14,6 @@ import sys
 from pathlib import Path
 from typing import List, Tuple, Optional
 
-
-# ============================================================================
-# AUDIO UTILITIES
-# ============================================================================
 
 def convert_audio_to_wav(
     input_file: str,
@@ -41,22 +36,22 @@ def convert_audio_to_wav(
     if output_file is None:
         output_file = str(Path(input_file).with_suffix('.wav'))
     
-    print(f"🔊 Converting audio: {input_file} -> {output_file}")
+    print(f" Converting audio: {input_file} -> {output_file}")
     
     cmd = [
         "ffmpeg", "-i", input_file,
         "-ar", str(sample_rate),
         "-ac", str(channels),
-        "-y",  # Overwrite output
+        "-y",  
         output_file
     ]
     
     try:
         subprocess.run(cmd, check=True, capture_output=True)
-        print(f"   ✅ Converted successfully!")
+        print(f"    Converted successfully!")
         return output_file
     except subprocess.CalledProcessError as e:
-        print(f"   ❌ Conversion failed: {e.stderr.decode()}")
+        print(f"    Conversion failed: {e.stderr.decode()}")
         raise
 
 
@@ -75,9 +70,9 @@ def clean_audio(input_file: str, output_file: str = None) -> str:
         base = Path(input_file).stem
         output_file = f"{base}_clean.wav"
     
-    print(f"🧹 Cleaning audio: {input_file}")
+    print(f" Cleaning audio: {input_file}")
     
-    # Apply high-pass filter (remove low rumble) and normalize
+
     cmd = [
         "ffmpeg", "-i", input_file,
         "-af", "highpass=f=200,lowpass=f=3000,loudnorm",
@@ -86,16 +81,13 @@ def clean_audio(input_file: str, output_file: str = None) -> str:
     
     try:
         subprocess.run(cmd, check=True, capture_output=True)
-        print(f"   ✅ Audio cleaned!")
+        print(f"    Audio cleaned!")
         return output_file
     except subprocess.CalledProcessError as e:
-        print(f"   ❌ Cleaning failed: {e.stderr.decode()}")
+        print(f"    Cleaning failed: {e.stderr.decode()}")
         raise
 
 
-# ============================================================================
-# IMAGE UTILITIES
-# ============================================================================
 
 def resize_image(
     input_file: str,
@@ -117,7 +109,7 @@ def resize_image(
         base = Path(input_file).stem
         output_file = f"{base}_resized.jpg"
     
-    print(f"🖼️  Resizing image: {input_file} -> {size}x{size}")
+    print(f"  Resizing image: {input_file} -> {size}x{size}")
     
     cmd = [
         "ffmpeg", "-i", input_file,
@@ -127,16 +119,12 @@ def resize_image(
     
     try:
         subprocess.run(cmd, check=True, capture_output=True)
-        print(f"   ✅ Image resized!")
+        print(f"    Image resized!")
         return output_file
     except subprocess.CalledProcessError as e:
-        print(f"   ❌ Resize failed: {e.stderr.decode()}")
+        print(f"    Resize failed: {e.stderr.decode()}")
         raise
 
-
-# ============================================================================
-# BATCH PROCESSING
-# ============================================================================
 
 def batch_process(
     face_image: str,
@@ -157,7 +145,7 @@ def batch_process(
     os.makedirs(output_dir, exist_ok=True)
     
     print("=" * 80)
-    print(f"🎬 BATCH PROCESSING: {len(audio_files)} videos")
+    print(f" BATCH PROCESSING: {len(audio_files)} videos")
     print("=" * 80)
     
     outputs = []
@@ -165,35 +153,26 @@ def batch_process(
     for i, audio_file in enumerate(audio_files, 1):
         print(f"\n[{i}/{len(audio_files)}] Processing: {audio_file}")
         
-        # Generate output filename
         base_name = Path(audio_file).stem
         output_file = os.path.join(output_dir, f"{base_name}_lipsync.mp4")
         
-        # Convert audio if needed
         if not audio_file.endswith('.wav'):
             audio_file = convert_audio_to_wav(audio_file)
         
-        # Run Modal pipeline (import here to avoid circular dependency)
         try:
-            # This would call your Modal function
-            # For now, just a placeholder
             print(f"   → Running lip-sync pipeline...")
             print(f"   → Output: {output_file}")
             outputs.append(output_file)
         except Exception as e:
-            print(f"   ❌ Failed: {e}")
+            print(f"    Failed: {e}")
             continue
     
     print("\n" + "=" * 80)
-    print(f"✅ Batch processing complete! {len(outputs)}/{len(audio_files)} succeeded")
+    print(f" Batch processing complete! {len(outputs)}/{len(audio_files)} succeeded")
     print("=" * 80)
     
     return outputs
 
-
-# ============================================================================
-# VALIDATION
-# ============================================================================
 
 def validate_inputs(face_image: str, audio_file: str) -> bool:
     """
@@ -206,46 +185,38 @@ def validate_inputs(face_image: str, audio_file: str) -> bool:
     Returns:
         True if inputs are valid, False otherwise
     """
-    print("\n🔍 Validating inputs...")
+    print("\n Validating inputs...")
     
     valid = True
     
-    # Check face image
     if not os.path.exists(face_image):
-        print(f"   ❌ Face image not found: {face_image}")
+        print(f"    Face image not found: {face_image}")
         return False
     
-    # Check image format
     valid_image_formats = ['.jpg', '.jpeg', '.png']
     if not any(face_image.lower().endswith(fmt) for fmt in valid_image_formats):
-        print(f"   ⚠️  Warning: Unusual image format. Use JPG or PNG for best results.")
+        print(f"     Warning: Unusual image format. Use JPG or PNG for best results.")
     
-    # Check audio file
     if not os.path.exists(audio_file):
-        print(f"   ❌ Audio file not found: {audio_file}")
+        print(f"    Audio file not found: {audio_file}")
         return False
     
-    # Check audio format
     if not audio_file.lower().endswith('.wav'):
-        print(f"   ⚠️  Warning: Audio is not WAV format. Will auto-convert.")
+        print(f"     Warning: Audio is not WAV format. Will auto-convert.")
     
-    # Check file sizes
     image_size_mb = os.path.getsize(face_image) / (1024 * 1024)
     audio_size_mb = os.path.getsize(audio_file) / (1024 * 1024)
     
     if image_size_mb > 10:
-        print(f"   ⚠️  Warning: Large image ({image_size_mb:.1f} MB). Consider resizing.")
+        print(f"     Warning: Large image ({image_size_mb:.1f} MB). Consider resizing.")
     
     if audio_size_mb > 50:
-        print(f"   ⚠️  Warning: Large audio ({audio_size_mb:.1f} MB). May take longer to process.")
+        print(f"     Warning: Large audio ({audio_size_mb:.1f} MB). May take longer to process.")
     
-    print("   ✅ Inputs validated!")
+    print("    Inputs validated!")
     return valid
 
 
-# ============================================================================
-# TESTING
-# ============================================================================
 
 def create_test_data(output_dir: str = "test_data"):
     """
@@ -257,9 +228,8 @@ def create_test_data(output_dir: str = "test_data"):
     """
     os.makedirs(output_dir, exist_ok=True)
     
-    print("🧪 Creating test data...")
+    print(" Creating test data...")
     
-    # Create test image (blue square with white circle for face)
     test_image = os.path.join(output_dir, "test_face.jpg")
     cmd = [
         "ffmpeg",
@@ -270,9 +240,8 @@ def create_test_data(output_dir: str = "test_data"):
         "-y", test_image
     ]
     subprocess.run(cmd, check=True, capture_output=True)
-    print(f"   ✅ Test image: {test_image}")
+    print(f"    Test image: {test_image}")
     
-    # Create test audio (5 seconds, 440 Hz tone)
     test_audio = os.path.join(output_dir, "test_audio.wav")
     cmd = [
         "ffmpeg",
@@ -283,15 +252,11 @@ def create_test_data(output_dir: str = "test_data"):
         "-y", test_audio
     ]
     subprocess.run(cmd, check=True, capture_output=True)
-    print(f"   ✅ Test audio: {test_audio}")
+    print(f"    Test audio: {test_audio}")
     
-    print(f"\n📂 Test data created in: {output_dir}")
+    print(f"\n Test data created in: {output_dir}")
     print(f"   Run: modal run fyp_avatar_lipsync.py --face-image {test_image} --audio-file {test_audio}")
 
-
-# ============================================================================
-# CLI INTERFACE
-# ============================================================================
 
 def main():
     """Command-line interface for utility functions."""
@@ -303,29 +268,24 @@ def main():
     
     subparsers = parser.add_subparsers(dest="command", help="Command to run")
     
-    # Convert audio command
     convert_parser = subparsers.add_parser("convert", help="Convert audio to WAV")
     convert_parser.add_argument("input", help="Input audio file")
     convert_parser.add_argument("-o", "--output", help="Output WAV file")
     convert_parser.add_argument("-r", "--rate", type=int, default=16000, help="Sample rate")
     
-    # Clean audio command
     clean_parser = subparsers.add_parser("clean", help="Clean audio (remove noise)")
     clean_parser.add_argument("input", help="Input WAV file")
     clean_parser.add_argument("-o", "--output", help="Output cleaned WAV file")
     
-    # Resize image command
     resize_parser = subparsers.add_parser("resize", help="Resize image")
     resize_parser.add_argument("input", help="Input image file")
     resize_parser.add_argument("-s", "--size", type=int, default=512, help="Target size")
     resize_parser.add_argument("-o", "--output", help="Output image file")
     
-    # Validate command
     validate_parser = subparsers.add_parser("validate", help="Validate input files")
     validate_parser.add_argument("face", help="Face image file")
     validate_parser.add_argument("audio", help="Audio file")
     
-    # Test data command
     test_parser = subparsers.add_parser("test", help="Create test data")
     test_parser.add_argument("-o", "--output", default="test_data", help="Output directory")
     
